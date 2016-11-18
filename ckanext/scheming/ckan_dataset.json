@@ -23,6 +23,13 @@
       "form_placeholder": "eg. Some useful notes about the data"
     },
     {
+      "field_name": "spatial",
+      "label": "Spatial",
+      "form_snippet": "spatial.html",
+      "form_placeholder": "eg. Some useful notes about the data",
+      "display_snippet": "spatial.html"
+    },
+    {
       "field_name": "tag_string",
       "label": "Tags",
       "preset": "tag_string_autocomplete",

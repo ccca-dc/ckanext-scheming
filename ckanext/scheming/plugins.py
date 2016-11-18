@@ -91,7 +91,8 @@ class _SchemingMixin(object):
             'scheming_field_by_name':
                 helpers.scheming_field_by_name,
             'scheming_get_presets': helpers.scheming_get_presets,
-            'scheming_get_preset': helpers.scheming_get_preset
+            'scheming_get_preset': helpers.scheming_get_preset,
+            'scheming_get_json_objects': helpers.scheming_get_json_objects
             }
 
     def get_validators(self):
@@ -344,7 +345,7 @@ def _load_schema_module_path(url):
     Given a path like "ckanext.spatialx:spatialx_schema.json"
     find the second part relative to the import path of the first
     """
-    log.debug("Schema URL is {0}".format(url))    
+    log.debug("Schema URL is {0}".format(url))
     module, file_name = url.split(':', 1)
     try:
         # __import__ has an odd signature

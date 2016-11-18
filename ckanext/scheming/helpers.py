@@ -1,6 +1,8 @@
 from ckan.lib.helpers import lang
 from pylons import config
 from pylons.i18n import gettext
+import json
+import os
 
 
 def scheming_language_text(text, prefer_lang=None):
@@ -163,3 +165,17 @@ def scheming_field_by_name(fields, name):
     for f in fields:
         if f.get('field_name') == name:
             return f
+
+
+def scheming_get_json_objects(filename):
+    """
+    Helper to get json objects from a geojson file.
+    """
+    filepath = os.path.dirname(os.path.realpath(filename)) + "/ckanext/scheming/" + filename
+
+    with open(filepath) as f:
+        data = json.load(f)
+
+    data = sorted(data['features'], key=lambda k: k['properties'].get('Area_Name', 0))
+
+    return data

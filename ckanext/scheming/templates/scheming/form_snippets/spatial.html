@@ -1,5 +1,5 @@
 {#
-An input widget for polygons, such as the ckanext-spatial "spatial" field for 
+An input widget for polygons, such as the ckanext-spatial "spatial" field for
 the dataset extent.
 
 This widget retains the plain text input which accepts a valid GeoJSON
@@ -12,14 +12,14 @@ to many non-GIS-trained users
 of their dataset.
 
 This form snippet depends on a custom branch of ckanext-spatial, which
-provides (and is the appropriate home for) the JavaScript functions to 
+provides (and is the appropriate home for) the JavaScript functions to
 provide an editable map.
 
 #}
 
 {% import 'macros/form.html' as form %}
-{% with 
-    name=field.field_name, 
+{% with
+    name=field.field_name,
     id='field-' + field.field_name,
     label=h.scheming_language_text(field.label),
     placeholder=h.scheming_language_text(field.form_placeholder),
@@ -30,23 +30,28 @@ provide an editable map.
 %}
 
   {% call form.input_block(id, label, error, classes, is_required=is_required) %}
-  
+
     {% set map_config = h.get_common_map_config() %}
-    <div class="dataset-map" 
+    <div class="dataset-map"
         data-module="spatial-form"
         data-input_id="{{ id }}"
-        data-extent="{{ value }}" 
-        data-module-site_url="{{ h.dump_json(h.url('/', locale='default', qualified=true)) }}" 
+        data-extent="{{ value }}"
+        data-module-site_url="{{ h.dump_json(h.url('/', locale='default', qualified=true)) }}"
         data-module-map_config="{{ h.dump_json(map_config) }}">
       <div id="dataset-map-container"></div>
     </div>
     <p></p><!-- a little trailing space -->
     {% resource 'ckanext-spatial/spatial_form' %}
-    
+
+    {% set austria = h.scheming_get_json_objects('austria.geojson') %}
+    {% set states = h.scheming_get_json_objects('austria_states.geojson') %}
+    {% set districts = h.scheming_get_json_objects('austria_districts.geojson') %}
+    {% set municipalities = h.scheming_get_json_objects('austria_municipalities.geojson') %}
+
     <!-- choose predefined, on change update input {{ id }} -->
     <script type="text/javascript">
-    /* Set the value of textarea #{{ id }} to the value of select menu #select-{{ id }} 
-     * IDs are hard-coded, as this script lives at the same level as the IDs are defined 
+    /* Set the value of textarea #{{ id }} to the value of select menu #select-{{ id }}
+     * IDs are hard-coded, as this script lives at the same level as the IDs are defined
      */
     function updateInput(){
         $("#{{ id }}").val($("#select-{{ id }}").val());
@@ -54,6 +59,21 @@ provide an editable map.
     </script>
     <select id="select-{{ id }}" onchange="updateInput()">
         <option value="">-- Select pre-defined extent --</option>
+        {% for area in austria %}
+          <option value="{{ area['geometry'] | replace("u'","\"") | replace("'","\"") | empty_and_escape }}">{{ area['properties']['Area_Name'].title() }}</option>
+        {% endfor %}
+        <option disabled>States:</option>
+        {% for area in states %}
+          <option value="{{ area['geometry'] | replace("u'","\"") | replace("'","\"") | empty_and_escape }}">{{ area['properties']['Area_Name'].title() }}</option>
+        {% endfor %}
+        <option disabled>Districts:</option>
+        {% for area in districts %}
+          <option value="{{ area['geometry'] | replace("u'","\"") | replace("'","\"") | empty_and_escape }}">{{ area['properties']['Area_Name'].title() }}</option>
+        {% endfor %}
+        <option disabled>Municipalities:</option>
+        {% for area in municipalities %}
+          <option value="{{ area['geometry'] | replace("u'","\"") | replace("'","\"") | empty_and_escape }}">{{ area['properties']['Area_Name'].capitalize() }}</option>
+        {% endfor %}
       {% for c in field.choices %}
         <option value="{{ c.value | replace("u'","\"") | replace("'","\"") | empty_and_escape }}">{{ c.label }}</option>
       {% endfor %}
@@ -69,11 +89,11 @@ provide an editable map.
     -->
     <!-- /choose predefined -->
 
-    <!-- TODO Show all attached GeoJSON resources on map (ajax load). This helps 
-         the user to draw a bounding polygon around existing spatial features, but also 
+    <!-- TODO Show all attached GeoJSON resources on map (ajax load). This helps
+         the user to draw a bounding polygon around existing spatial features, but also
          captures user's silent knowledge about the real dataset extent. -->
 
-    {{ form.info(text="Draw and edit the dataset extent as rectangles and/or polygons on the map, 
+    {{ form.info(text="Draw and edit the dataset extent as rectangles and/or polygons on the map,
        or select a pre-defined area from the menu,
        or paste a GeoJSON Polygon or Multipolygon geometry below", inline=false) }}
 
@@ -81,7 +101,7 @@ provide an editable map.
          The map updates this input on drawing/editing/deleting shapes,
          the select menu updates this input on selecting options.
     -->
-    <textarea id="{{ id }}" type="{{ type }}" name="{{ name }}" 
+    <textarea id="{{ id }}" type="{{ type }}" name="{{ name }}"
         placeholder="{{ placeholder }}" rows=10 style="width:100%;"
     >{{ value | empty_and_escape }}</textarea>
 
