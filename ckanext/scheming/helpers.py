@@ -3,6 +3,7 @@ from pylons import config
 from pylons.i18n import gettext
 import json
 import os
+import inspect
 
 
 def scheming_language_text(text, prefer_lang=None):
@@ -170,12 +171,19 @@ def scheming_field_by_name(fields, name):
 def scheming_get_json_objects(filename):
     """
     Helper to get json objects from a geojson file.
+    Borrowed lots of stuff from scheming plugin.py
     """
-    filepath = os.path.dirname(os.path.realpath(filename)) + "/ckanext/scheming/" + filename
+    try:
+        m = __import__('ckanext.scheming', fromlist=[''])
+    except ImportError, e:
+        log.error("Could not load module {0}, got {1}".format(module,e))
+        return
 
-    with open(filepath) as f:
-        data = json.load(f)
-
-    data = sorted(data['features'], key=lambda k: k['properties'].get('Area_Name', 0))
-
-    return data
+    p = os.path.join(os.path.dirname(inspect.getfile(m)),filename)
+    if os.path.exists(p):
+        with open(p) as f:
+            data = json.load(f)
+    
+        data = sorted(data['features'], key=lambda k: k['properties'].get('Area_Name', 0))
+    
+        return data
