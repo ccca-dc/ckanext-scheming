@@ -182,7 +182,7 @@ def scheming_get_json_objects(filename):
         log.error("Could not load module {0}, got {1}".format(m, e))
         return
 
-    p = os.path.join(os.path.dirname(inspect.getfile(m)), filename)
+    p = os.path.join(os.path.dirname(inspect.getfile(m)), "geojson", filename)
     if os.path.exists(p):
         with open(p) as f:
             data = json.load(f)
