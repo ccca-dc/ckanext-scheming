@@ -4,6 +4,9 @@ from pylons.i18n import gettext
 import json
 import os
 import inspect
+import logging
+
+log = logging.getLogger(__name__)
 
 
 def scheming_language_text(text, prefer_lang=None):
@@ -176,14 +179,14 @@ def scheming_get_json_objects(filename):
     try:
         m = __import__('ckanext.scheming', fromlist=[''])
     except ImportError, e:
-        log.error("Could not load module {0}, got {1}".format(module,e))
+        log.error("Could not load module {0}, got {1}".format(m, e))
         return
 
-    p = os.path.join(os.path.dirname(inspect.getfile(m)),filename)
+    p = os.path.join(os.path.dirname(inspect.getfile(m)), filename)
     if os.path.exists(p):
         with open(p) as f:
             data = json.load(f)
-    
+
         data = sorted(data['features'], key=lambda k: k['properties'].get('Area_Name', 0))
-    
+
         return data
