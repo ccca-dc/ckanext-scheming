@@ -251,6 +251,14 @@ class SchemingDatasetsPlugin(p.SingletonPlugin, DefaultDatasetForm,
             resource_schema[f['field_name']] = get_validators(
                 f, scheming_schema, False)
 
+        # deleting validator "tag_name_validator" from schema
+        schema['tags'].update({
+            'name': [get_validator('not_missing'),
+                        get_validator('not_empty'),
+                        unicode,
+                        get_validator('tag_length_validator')]
+            })
+
         return navl_validate(data_dict, schema, context)
 
     def get_actions(self):
