@@ -1,7 +1,7 @@
 {%- set values = data[field.field_name] -%}
 {%- set labels = [] -%}
 
-{%- for choice in field.choices -%}
+{%- for choice in h.scheming_field_choices(field) -%}
     {%- if choice.value in values -%}
       {%- do labels.append(h.scheming_language_text(choice.label)) -%}
     {%- endif -%}
@@ -10,9 +10,12 @@
 {%- if labels|length == 1 -%}
   {{ labels[0] }}
 {%- else -%}
-  <ul>
+    {%- if field.get('sorted_choices') -%}
+        {%- set labels = labels|sort -%}
+    {%- endif -%}
+    <ul>
     {%- for label in labels -%}
        <li>{{ label }}</li>
     {%- endfor -%}
-  </ul>
+    </ul>
 {%- endif -%}

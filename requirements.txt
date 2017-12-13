@@ -2,3 +2,5 @@ ckanapi
 
 # scheming/macros/form_spatial.html requires Leaflet.draw
 #-e git+https://github.com/Leaflet/Leaflet.draw.git#egg=leaflet-draw
+ckantoolkit>=0.0.2
+pytz
