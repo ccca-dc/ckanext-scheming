@@ -1,5 +1,9 @@
 {% import 'macros/form.html' as form %}
 
+{% if field. form_attrs %}
+    {% do field.form_attrs.update({"class": "form-control"}) %}
+{% endif %}
+
 {% call form.input(
     field.field_name,
     id='field-' + field.field_name,
