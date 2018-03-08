@@ -1,6 +1,7 @@
 {% import 'macros/form.html' as form %}
 
-{% if 'form_attrs' in field %}
+{#} KATHI - for format reasons appending form-control, however not for autocomplete fields {#}
+{% if 'form_attrs' in field and not ('data-module' in field.form_attrs or field.form_attrs['data-module'] == 'autocomplete') %}
     {% do field.form_attrs.update({"class": "form-control"}) %}
 {% endif %}
 
