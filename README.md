@@ -5,8 +5,8 @@ This extension provides a way to configure and share
 CKAN schemas using a JSON schema description. Custom
 template snippets for editing and display are also supported.
 
-[![Build Status](https://travis-ci.org/open-data/ckanext-scheming.svg?branch=master)](https://travis-ci.org/open-data/ckanext-scheming)
-[![Coverage](https://coveralls.io/repos/open-data/ckanext-scheming/badge.svg?branch=master&service=github)](https://coveralls.io/github/open-data/ckanext-scheming?branch=master)
+[![Circle CI](https://circleci.com/gh/ckan/ckanext-scheming/tree/master.svg?style=svg)](https://circleci.com/gh/ckan/ckanext-scheming/tree/master)
+[![Coverage](https://coveralls.io/repos/ckan/ckanext-scheming/badge.svg?branch=master&service=github)](https://coveralls.io/github/ckan/ckanext-scheming?branch=master)
 
 Requirements
 ============
@@ -157,7 +157,7 @@ validator.
 
 ### `choices`
 
-The `choices` list must be provided for
+The `choices` list may be provided for
 select and multiple choice fields.
 List elements include `label`s for human-readable text for
 each element (may be multiple languages like a [field label](#label))
@@ -174,6 +174,27 @@ and `value`s that will be stored in the dataset or resource:
     "..."
   ],
   "...": "..."
+}
+```
+
+### `choices_helper`
+
+If a choices list is not provided you must provide a `choices_helper`
+function that will return a list of choices in the same format as
+the `choices` list above.
+
+You may register your own helper function or use the
+`scheming_datastore_choices` helper included in ckanext-scheming:
+
+```json
+{
+  "preset": "select",
+  "choices_helper": "scheming_datastore_choices",
+  "datastore_choices_resource": "countries-resource-id-or-alias",
+  "datastore_choices_columns": {
+    "value": "Country Code",
+    "label": "English Country Name"
+  }
 }
 ```
 
@@ -203,6 +224,10 @@ This extension includes the following presets:
   field
 * `"resource_format_autocomplete"` - resource format validation with
   format guessing based on url and autocompleting form field
+* `"json_object"` - JSON based input. Only JSON objects are supported.
+  The input JSON will be loaded during output (eg when loading the dataset in
+  a template or via the API).
+
 
 You may add your own presets by adding them to the `scheming.presets`
 configuration setting.
@@ -243,14 +268,14 @@ This extension includes the following form snippets:
   a select box
 * [multiple_checkbox.html](ckanext/scheming/templates/scheming/form_snippets/multiple_choice.html) -
   a group of checkboxes
-* [multiple_select.html](ckanext/scheming/templates/scheming/form_snippets/multiple_choice.html) -
+* [multiple_select.html](ckanext/scheming/templates/scheming/form_snippets/multiple_select.html) -
   a multiple select box
 
 
 ### `display_snippet`
 
 The `display_snippet` value is the name of the snippet template to
-use for this field in the dataset, group or organization view page.
+use for this field in the dataset, resource, group or organization view page.
 A number of snippets are provided with this
 extension, but you may also provide your own by creating templates
 under `scheming/display_snippets/` in a template directory in your
@@ -272,6 +297,20 @@ This extension includes the following display snippets:
   show the label text for the choice selected
 * [multiple_choice.html](ckanext/scheming/templates/scheming/display_snippets/) -
   show the label text for all choices selected
+
+If `null` is passed as value in `display_snippet`, it will remove the field from being displayed at the view page.
+
+### `select_size`
+
+Set to the number of [choices](#choices) to display in select, multiple_select
+and multiple_check_box [form](#form_snippet) and [display](#display_snippet)
+snippets.
+
+
+### `sorted_choices`
+
+Set to `"true"` to sort [choices](#choices) alphabetically in [form](#form_snippet)
+and [display](#display_snippet) snippets.
 
 
 ### `validators`
@@ -305,7 +344,7 @@ the [scheming.validation.scheming_validator](ckanext/scheming/validation.py)
 function. This decorator will make scheming pass this field dict to the
 validator and use its return value for validation of the field.
 
-CKAN's [validator functions reference](http://docs.ckan.org/en/latest/extensions/validators.html) 
+CKAN's [validator functions reference](http://docs.ckan.org/en/latest/extensions/validators.html)
 lists available validators ready to be used.
 
 ### `output_validators`

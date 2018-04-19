@@ -1,4 +1,8 @@
-from ckan.lib.helpers import lang
+import re
+import datetime
+import pytz
+import json
+
 from pylons import config
 from pylons.i18n import gettext
 import json
@@ -7,6 +11,15 @@ import inspect
 import logging
 
 log = logging.getLogger(__name__)
+
+from ckanapi import LocalCKAN, NotFound, NotAuthorized
+
+
+def lang():
+    # access this function late in case ckan
+    # is not set up fully when importing this module
+    from ckantoolkit import h
+    return h.lang()
 
 
 def scheming_language_text(text, prefer_lang=None):
@@ -20,11 +33,12 @@ def scheming_language_text(text, prefer_lang=None):
     if not text:
         return u''
 
+    assert text != {}
     if hasattr(text, 'get'):
         try:
             if prefer_lang is None:
                 prefer_lang = lang()
-        except:
+        except TypeError:
             pass  # lang() call will fail when no user language available
         else:
             try:
@@ -47,6 +61,19 @@ def scheming_language_text(text, prefer_lang=None):
     return t
 
 
+def scheming_field_choices(field):
+    """
+    :param field: scheming field definition
+    :returns: choices iterable or None if not found.
+    """
+    if 'choices' in field:
+        return field['choices']
+    if 'choices_helper' in field:
+        from ckantoolkit import h
+        choices_fn = getattr(h, field['choices_helper'])
+        return choices_fn(field)
+
+
 def scheming_choices_label(choices, value):
     """
     :param choices: choices list of {"label": .., "value": ..} dicts
@@ -58,8 +85,47 @@ def scheming_choices_label(choices, value):
     """
     for c in choices:
         if c['value'] == value:
-            return scheming_language_text(c['label'])
+            return scheming_language_text(c.get('label', value))
     return scheming_language_text(value)
+
+
+def scheming_datastore_choices(field):
+    """
+    Required scheming field:
+    "datastore_choices_resource": "resource_id_or_alias"
+
+    Optional scheming fields:
+    "datastore_choices_columns": {
+        "value": "value_column_name",
+        "label": "label_column_name" }
+    "datastore_choices_limit": 1000 (default)
+
+    When columns aren't specified the first column is used as value
+    and second column used as label.
+    """
+    resource_id = field['datastore_choices_resource']
+    limit = field.get('datastore_choices_limit', 1000)
+    columns = field.get('datastore_choices_columns')
+    fields = None
+    if columns:
+        fields = [columns['value'], columns['label']]
+
+    # anon user must be able to read choices or this helper
+    # could be used to leak data from private datastore tables
+    lc = LocalCKAN(username='')
+    try:
+        result = lc.action.datastore_search(
+            resource_id=resource_id,
+            limit=limit,
+            fields=fields)
+    except (NotFound, NotAuthorized):
+        return []
+
+    if not fields:
+        fields = [f['id'] for f in result['fields'] if f['id'] != '_id']
+
+    return [{'value': r[fields[0]], 'label': r[fields[1]]}
+        for r in result['records']]
 
 
 def scheming_field_required(field):
@@ -161,6 +227,19 @@ def scheming_get_organization_schema(organization_type, expanded=True):
         return schemas.get(organization_type)
 
 
+def scheming_get_schema(entity_type, object_type, expanded=True):
+    """
+    Return the schema for the entity and object types passed
+    or None if no schema is defined for the passed types
+    """
+    if entity_type == 'dataset':
+        return scheming_get_dataset_schema(object_type, expanded)
+    elif entity_type == 'organization':
+        return scheming_get_organization_schema(object_type, expanded)
+    elif entity_type == 'group':
+        return scheming_get_group_schema(object_type, expanded)
+
+
 def scheming_field_by_name(fields, name):
     """
     Simple helper to grab a field from a schema field list
@@ -169,7 +248,6 @@ def scheming_field_by_name(fields, name):
     for f in fields:
         if f.get('field_name') == name:
             return f
-
 
 def scheming_get_json_objects(filename):
     """
@@ -190,3 +268,103 @@ def scheming_get_json_objects(filename):
         data = sorted(data['features'], key=lambda k: k['properties'].get('Area_Name', 0))
 
         return data
+
+def date_tz_str_to_datetime(date_str):
+    '''Convert ISO-like formatted datestring with timezone to datetime object.
+
+    This function converts ISO format datetime-strings into datetime objects.
+    Times may be specified down to the microsecond.  UTC offset or timezone
+    information be included in the string.
+
+    Note - Although originally documented as parsing ISO date(-times), this
+           function doesn't fully adhere to the format.  It allows microsecond
+           precision, despite that not being part of the ISO format.
+    '''
+    split = date_str.split('T')
+
+    if len(split) < 2:
+        raise ValueError('Unable to parse time')
+
+    tz_split = re.split('([Z+-])', split[1])
+
+    date = split[0] + 'T' + tz_split[0]
+    time_tuple = re.split('[^\d]+', date, maxsplit=5)
+
+    # Extract seconds and microseconds
+    if len(time_tuple) >= 6:
+        m = re.match('(?P<seconds>\d{2})(\.(?P<microseconds>\d{3,6}))?$',
+                     time_tuple[5])
+        if not m:
+            raise ValueError('Unable to parse %s as seconds.microseconds' %
+                             time_tuple[5])
+        seconds = int(m.groupdict().get('seconds'))
+        microseconds = int(m.groupdict(0).get('microseconds'))
+        time_tuple = time_tuple[:5] + [seconds, microseconds]
+
+    final_date = datetime.datetime(*map(int, time_tuple))
+
+    # Apply the timezone offset
+    if len(tz_split) > 1 and not tz_split[1] == 'Z':
+        tz = tz_split[2]
+        tz_tuple = re.split('[^\d]+', tz)
+
+        if tz_tuple[0] == '':
+            raise ValueError('Unable to parse timezone')
+        offset = int(tz_tuple[0]) * 60
+
+        if len(tz_tuple) > 1 and not tz_tuple[1] == '':
+            offset += int(tz_tuple[1])
+
+        if tz_split[1] == '+':
+            offset *= -1
+
+        final_date += datetime.timedelta(minutes=offset)
+
+    return final_date
+
+
+def scheming_datetime_to_UTC(date):
+    if (date.tzinfo):
+        date = date.astimezone(pytz.utc)
+
+    # Make date naive before returning
+    return date.replace(tzinfo=None)
+
+
+def scheming_datetime_to_tz(date, tz):
+    if isinstance(tz, basestring):
+        tz = pytz.timezone(tz)
+
+    # Make date naive before returning
+    return pytz.utc.localize(date).astimezone(tz).replace(tzinfo=None)
+
+
+def scheming_get_timezones(field):
+    def to_options(list):
+        return [{'value':tz, 'text':tz} for tz in list]
+
+    def validate_tz(list):
+        return [tz for tz in list if tz in pytz.all_timezones]
+
+    timezones = field.get('timezones')
+    if timezones == 'all':
+        return to_options(pytz.all_timezones)
+    elif isinstance(timezones, list):
+        return to_options(validate_tz(timezones))
+
+    return to_options(pytz.common_timezones)
+
+
+def scheming_display_json_value(value, indent=2):
+    """
+    Returns the object passed serialized as a JSON string.
+
+    :param value: The object to serialize.
+    :returns: The serialized object, or the original value if it could not be
+        serialized.
+    :rtype: string
+    """
+    try:
+        return json.dumps(value, indent=indent, sort_keys=True)
+    except (TypeError, ValueError):
+        return value
