@@ -269,6 +269,30 @@ def scheming_get_json_objects(filename):
 
         return data
 
+def scheming_get_csv_objects(filename):
+    """
+    Helper to get json objects from a geojson file.
+    Borrowed lots of stuff from scheming plugin.py
+    """
+    data = []
+
+    try:
+        m = __import__('ckanext.scheming', fromlist=[''])
+    except ImportError, e:
+        log.error("Could not load module {0}, got {1}".format(m, e))
+        return
+
+    import csv
+
+    p = os.path.join(os.path.dirname(inspect.getfile(m)), "geojson", filename)
+
+    with open(p) as my_file:
+        reader = csv.DictReader(my_file, delimiter='|', quoting=csv.QUOTE_NONE, escapechar='\\')
+        for row in reader:
+            data.append({'name': row['name'], 'polygon': row['polygon']})
+
+    return data
+
 def date_tz_str_to_datetime(date_str):
     '''Convert ISO-like formatted datestring with timezone to datetime object.
 

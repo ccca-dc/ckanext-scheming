@@ -94,6 +94,7 @@ class _SchemingMixin(object):
             'scheming_get_presets': helpers.scheming_get_presets,
             'scheming_get_preset': helpers.scheming_get_preset,
             'scheming_get_json_objects': helpers.scheming_get_json_objects,
+            'scheming_get_csv_objects': helpers.scheming_get_csv_objects,
             'scheming_get_schema': helpers.scheming_get_schema,
             'scheming_get_timezones': helpers.scheming_get_timezones,
             'scheming_datetime_to_tz': helpers.scheming_datetime_to_tz,
