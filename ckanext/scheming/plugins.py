@@ -46,6 +46,7 @@ from ckanext.scheming.converters import (
 import os
 import inspect
 import logging
+import ckan.plugins.toolkit as toolkit
 
 log = logging.getLogger(__name__)
 
@@ -153,6 +154,8 @@ class _SchemingMixin(object):
             self.SCHEMA_TYPE_FIELD
         )
         self._expanded_schemas = _expand_schemas(self._schemas)
+
+        toolkit.add_resource('fanstatic', 'scheming')
 
     def is_fallback(self):
         return self._is_fallback
